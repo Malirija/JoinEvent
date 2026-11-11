@@ -35,7 +35,7 @@ export default function AppLayout() {
         <div className="brand"><span className="brand-mark"><CalendarDays size={19} strokeWidth={2.3} /></span><span>Join<span className="brand-accent">Event</span></span><button className="mobile-close icon-button" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={19} /></button></div>
         <div className="nav-label">MENU</div>
         <nav className="main-nav" aria-label="Main navigation">
-          {links.map(({ to, label, icon: Icon, end }) => <NavLink key={to} to={to} end={end} onClick={() => setMenuOpen(false)} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}><Icon size={18} strokeWidth={1.8} /><span>{label}</span></NavLink>)}
+          {links.filter(({ to }) => user || (to !== '/' && to !== '/statistics')).map(({ to, label, icon: Icon, end }) => <NavLink key={to} to={to} end={end} onClick={() => setMenuOpen(false)} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}><Icon size={18} strokeWidth={1.8} /><span>{label}</span></NavLink>)}
           {user && <>
             <NavLink end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/my-events" onClick={() => setMenuOpen(false)}><CalendarDays size={18} strokeWidth={1.8} /><span>My Events</span></NavLink>
             <NavLink end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/my-registrations" onClick={() => setMenuOpen(false)}><Ticket size={18} strokeWidth={1.8} /><span>My Registrations</span></NavLink>
