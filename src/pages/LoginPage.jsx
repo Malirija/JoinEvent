@@ -1,0 +1,2 @@
+import { LogIn } from 'lucide-react'
+export default function LoginPage() { return <div className="login-wrap"><section className="panel login-panel"><span className="login-mark"><LogIn size={22}/></span><p className="eyebrow">WELCOME BACK</p><h1>Sign in to JoinEvent</h1><p className="page-description">Your account sign in will be available soon.</p><button className="button button-primary login-button" disabled>Continue with email</button></section></div> }
