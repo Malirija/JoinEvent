@@ -53,6 +53,7 @@ The Vite client reads these public browser variables:
 | `VITE_SUPABASE_URL` | Yes | Supabase project URL, such as `https://<project-ref>.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | One key required | Supabase publishable key. Preferred for new projects. |
 | `VITE_SUPABASE_ANON_KEY` | One key required | Legacy anon/public key. Used when the publishable key is not set. |
+| `VITE_ZAPIER_WEBHOOK_URL` | Optional | Zapier Catch Hook base URL called after a successful event registration. |
 
 Only a publishable/anon key belongs in a browser application. **Never put a
 `service_role` key in a `VITE_` variable or commit it to this repository.**
@@ -61,7 +62,8 @@ Database access is controlled by RLS and authenticated RPC functions.
 ## Supabase setup
 
 1. Create a Supabase project and copy its Project URL and publishable (or anon)
-   key into `.env.local`.
+   key into `.env.local`. Add `VITE_ZAPIER_WEBHOOK_URL` there if you want signup
+   notifications sent to Zapier.
 2. In Supabase Authentication settings, configure the site URL and allowed
    redirect URLs for local development and the deployed Vercel domain.
 3. Apply the database migrations using one of the methods below.
@@ -166,6 +168,15 @@ enforces event ownership. Signup changes are made only through the
 RPC locks the event row while it checks capacity to handle concurrent
 registrations safely.
 
+After `register_for_event` succeeds, the browser calls the configured Zapier
+Catch Hook with a GET request and these query parameters: `paid` (`1` for a
+paid event, `0` for a free event), `email` (the signed-in registrant), and
+`title` (the event title). For example, a hook receives
+`?paid=1&email=marija.new.1992%40gmail.com&title=renginisapiemena`. The Zapier
+URL is delivered to the browser as a Vite environment variable, so it is public
+in the built app; use a hook dedicated to this workflow. Webhook failure does
+not undo a completed registration.
+
 The Statistics page uses `get_event_creation_stats()` for the 24-hour
 Europe/Vilnius event-creation chart and `get_event_statistics(uuid)` for
 confirmed signups on events owned by the signed-in user. The hourly chart
@@ -179,7 +190,8 @@ includes all historical event records.
    - Output directory: `dist`
 3. Add `VITE_SUPABASE_URL` and either
    `VITE_SUPABASE_PUBLISHABLE_KEY` or `VITE_SUPABASE_ANON_KEY` in the Vercel
-   project Environment Variables for the environments you use.
+   project Environment Variables for the environments you use. Add
+   `VITE_ZAPIER_WEBHOOK_URL` to enable signup notifications.
 4. Deploy. The included `vercel.json` rewrites application paths to `index.html`
    so direct navigation and refreshes on nested React Router routes work.
 5. Add the production Vercel URL to Supabase Auth's site and redirect URL

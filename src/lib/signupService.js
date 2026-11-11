@@ -37,11 +37,42 @@ async function requireSignedIn(client) {
   return data.user
 }
 
-export async function registerForEvent(eventId) {
+export async function registerForEvent(eventId, eventDetails) {
   const client = clientOrThrow()
-  await requireSignedIn(client)
+  const user = await requireSignedIn(client)
   const { data, error } = await client.rpc('register_for_event', { p_event_id: eventId })
   if (error) presentRpcError(error)
+
+  const webhookBaseUrl = import.meta.env.VITE_ZAPIER_WEBHOOK_URL?.trim()
+  if (!webhookBaseUrl) {
+    if (import.meta.env.DEV) console.warn('Event registration succeeded, but Zapier was skipped because VITE_ZAPIER_WEBHOOK_URL is not configured.')
+    return data?.[0] || null
+  }
+
+  try {
+    // The caller already has the event from getEventById. Keep the fallback
+    // query for any other callers of this service.
+    let event = eventDetails
+    if (!event?.title || event.price == null) {
+      const { data: fetchedEvent, error: eventError } = await client
+        .from('events')
+        .select('title,price')
+        .eq('id', eventId)
+        .single()
+      if (eventError) throw eventError
+      event = fetchedEvent
+    }
+
+    const webhookUrl = new URL(webhookBaseUrl)
+    webhookUrl.searchParams.set('paid', Number(event.price) > 0 ? '1' : '0')
+    webhookUrl.searchParams.set('email', user.email || '')
+    webhookUrl.searchParams.set('title', event.title)
+    await fetch(webhookUrl.toString(), { method: 'GET', mode: 'no-cors', credentials: 'omit', keepalive: true })
+  } catch (webhookError) {
+    // Registration has already succeeded; a webhook outage must not make the
+    // user retry and appear to have a failed or duplicate registration.
+    console.error('The signup succeeded, but the Zapier webhook could not be called.', webhookError)
+  }
   return data?.[0] || null
 }
 

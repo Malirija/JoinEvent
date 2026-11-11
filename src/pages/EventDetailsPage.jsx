@@ -93,7 +93,7 @@ export default function EventDetailsPage() {
     try {
       const result = currentSignup?.signup_status === 'active'
         ? await cancelSignup(event.id)
-        : await registerForEvent(event.id)
+        : await registerForEvent(event.id, event)
       setSignupSuccess(result?.result_message || 'Your registration was updated.')
       try {
         await reloadSignupData()
