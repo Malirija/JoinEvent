@@ -7,9 +7,10 @@ separate authentication table.
 
 ## Apply everything with Supabase CLI (recommended)
 
-The complete database structure is bundled into
-`supabase/migrations/20261111190000_joinevent_schema.sql`. From the project root,
-link the project if you have not already linked it, then push migrations:
+The database structure is in the ordered migrations under `supabase/migrations/`.
+The second migration adds the event category and price fields plus the secure
+capacity-aware event listing RPC required by the Events module. From the project
+root, link the project if you have not already linked it, then push migrations:
 
 ```powershell
 supabase link --project-ref YOUR_PROJECT_REF
@@ -17,14 +18,17 @@ supabase db push
 ```
 
 Replace `YOUR_PROJECT_REF` with the reference shown in the Supabase dashboard.
-If the project is already linked, run only `supabase db push`. The migration
-creates the three tables, Auth trigger, RPC functions, RLS policies, grants,
-and indexes in dependency order.
+If the project is already linked, run only `supabase db push`. The migrations
+create the three tables, Auth trigger, RPC functions, RLS policies, grants,
+event fields, and indexes in dependency order. The Events migration also creates
+profile rows for Auth users who existed before the profile trigger was added,
+so their event-owner foreign key is valid.
 
 The CLI migration does not include sample data. Seed rows depend on a real Auth
 user UUID, so create that user first and follow the optional seed steps below.
 The numbered SQL files in `database/` remain available for manual SQL Editor
-execution; keep them in sync with the bundled migration when changing schema.
+execution. For the Events module fields and listing RPC, also run the contents
+of `supabase/migrations/20261112090000_events_module.sql` after the base files.
 
 ## SQL Editor execution order
 
@@ -40,10 +44,13 @@ them in this exact order:
 7. `03_functions/get_event_statistics.sql` — per-event signup totals.
 8. `04_policies/enable_rls.sql` — grants and row-level security policies.
 9. `05_indexes/create_indexes.sql` — lookup and filtering indexes.
-10. Optional: `06_seed/seed.sql` — example event rows.
+10. `supabase/migrations/20261112090000_events_module.sql` — event category,
+    price, and capacity-aware read RPC.
+11. Optional: `06_seed/seed.sql` — example event rows.
 
 Run each complete file as a single SQL Editor query. The schema, trigger,
-functions, policies, and indexes are safe to re-run for this initial setup.
+functions, policies, indexes, and event module migration are safe to re-run for
+this initial setup.
 Seed setup is also repeatable for its fixed event IDs.
 
 ## Seed setup
