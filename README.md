@@ -39,6 +39,11 @@ Vite prints the local URL in the terminal. To produce and preview a production b
 - `/profile` — profile settings placeholder
 - `/login` — sign-in placeholder
 
+## Supabase database
+
+The database schema, RLS policies, RPC functions, seed instructions, and exact
+SQL Editor execution order are documented in [database/README.md](database/README.md).
+
 ## Project structure
 
 ```text
