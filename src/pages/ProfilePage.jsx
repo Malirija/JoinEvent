@@ -20,8 +20,8 @@ function EventImage({ category, title }) {
   return <img className="profile-event-image" src={getCategoryImage(category)} alt={`${title} event`} />
 }
 
-export default function ProfilePage() {
-  const { user } = useAuth()
+export default function ProfilePage({ view = 'profile' }) {
+  const { user, syncProfileName } = useAuth()
   const [reloadId, setReloadId] = useState(0)
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
@@ -55,6 +55,7 @@ export default function ProfilePage() {
     setSuccess('')
     try {
       const profile = await updateMyProfile(name)
+      syncProfileName(profile.name || name.trim())
       setData((current) => current && ({ ...current, profile: { ...current.profile, ...profile, name: profile.name || name.trim() } }))
       setName(profile.name || name.trim())
       setSuccess('Your name has been updated.')
@@ -93,13 +94,19 @@ export default function ProfilePage() {
 
   if (!profileData && !activeLoadError) return <Loading label="Loading your profile..." />
 
+  const pageContent = {
+    profile: { eyebrow: 'YOUR ACCOUNT', title: 'My Profile', description: 'Manage your personal account information.' },
+    events: { eyebrow: 'CREATED BY YOU', title: 'My Events', description: 'Manage the events you host.' },
+    registrations: { eyebrow: 'EVENTS YOU JOIN', title: 'My Registrations', description: 'View and manage your event registrations.' },
+  }[view]
+
   return <>
-    <div className="page-heading profile-heading"><div><p className="eyebrow">YOUR ACCOUNT</p><h1>My Profile</h1><p className="page-description">Manage your profile, hosted events, and registrations.</p></div></div>
+    <div className="page-heading profile-heading"><div><p className="eyebrow">{pageContent.eyebrow}</p><h1>{pageContent.title}</h1><p className="page-description">{pageContent.description}</p></div></div>
     {activeLoadError && <ErrorMessage message={activeLoadError} onRetry={reload}/>}
     {profileData && <>
       {success && <div className="event-success" role="status">{success}<button type="button" aria-label="Dismiss" onClick={() => setSuccess('')}>×</button></div>}
       {actionError && <ErrorMessage message={actionError}/>}
-      <section className="profile-account panel">
+      {view === 'profile' && <section className="profile-account panel">
         <div className="profile-avatar-large">{(profileData.profile.name || profileData.profile.email || 'U').slice(0, 1).toUpperCase()}</div>
         <div className="profile-account-main">
           <div className="profile-account-heading"><div><h2>Account information</h2><p>Personal information associated with your account.</p></div><span className="profile-member-since">Member since {formatEventDate(profileData.profile.created_at)}</span></div>
@@ -114,9 +121,9 @@ export default function ProfilePage() {
             {saveError && <ErrorMessage message={saveError}/>}
           </form>
         </div>
-      </section>
+      </section>}
 
-      <section className="profile-section">
+      {view === 'events' && <section className="profile-section">
         <div className="profile-section-heading"><div><p className="eyebrow">CREATED BY YOU</p><h2>My Events <span>{profileData.events.length}</span></h2></div><Link className="button button-primary" to="/events/new">Create event</Link></div>
         {profileData.events.length === 0 ? <section className="panel profile-empty-panel"><EmptyState icon={CalendarDays} title="No events yet" description="Events you create will appear here."/><Link className="button button-primary profile-empty-action" to="/events/new">Create an event</Link></section> : <div className="profile-list">{profileData.events.map((event) => <article className="profile-list-card panel" key={event.id}>
           <Link to={`/events/${event.id}`} className="profile-image-link"><EventImage category={event.category} title={event.title}/></Link>
@@ -124,9 +131,9 @@ export default function ProfilePage() {
             <div className="profile-item-meta"><span><CalendarDays size={14}/>{formatEventDate(event.starts_at)} · {formatEventTime(event.starts_at)}</span><span><MapPin size={14}/>{event.location}</span><span><UserRound size={14}/>{event.activeSignups} registered</span></div>
           </div>
         </article>)}</div>}
-      </section>
+      </section>}
 
-      <section className="profile-section">
+      {view === 'registrations' && <section className="profile-section">
         <div className="profile-section-heading"><div><p className="eyebrow">EVENTS YOU JOIN</p><h2>My Registrations <span>{profileData.signups.length}</span></h2></div></div>
         {profileData.signups.length === 0 ? <section className="panel profile-empty-panel"><EmptyState icon={Ticket} title="No registrations yet" description="When you register for an event, it will appear here."/><Link className="button button-primary profile-empty-action" to="/events">Browse events</Link></section> : <div className="profile-list">{profileData.signups.map((signup) => <article className="profile-list-card panel" key={signup.signup_id}>
           <Link to={`/events/${signup.event_id}`} className="profile-image-link"><EventImage category={signup.event?.event_category || signup.event?.category} title={signup.event?.title || 'Event'}/></Link>
@@ -134,7 +141,7 @@ export default function ProfilePage() {
             <div className="profile-item-meta">{(signup.event?.event_starts_at || signup.event?.starts_at) && <span><CalendarDays size={14}/>{formatEventDate(signup.event.event_starts_at || signup.event.starts_at)} · {formatEventTime(signup.event.event_starts_at || signup.event.starts_at)}</span>}<span><MapPin size={14}/>{signup.event?.event_location || signup.event?.location || 'Location unavailable'}</span><span><Clock3 size={14}/>Registered {formatEventDate(signup.registered_at)}</span><span><Ticket size={14}/>{formatEventPrice(signup.event?.event_price ?? signup.event?.price ?? 0)}</span></div>
           </div>
         </article>)}</div>}
-      </section>
+      </section>}
     </>}
     <ConfirmDialog open={Boolean(confirmAction)} title={confirmAction?.type === 'event' ? 'Delete this event?' : 'Cancel this registration?'} message={confirmAction?.type === 'event' ? `“${confirmAction?.item.title}” and its signup history will be permanently deleted.` : `Cancel your place for “${confirmAction?.item.event.title}”? Your registration history will be kept.`} confirmLabel={actionBusy ? 'Working...' : confirmAction?.type === 'event' ? 'Delete event' : 'Cancel registration'} cancelLabel="Go back" onCancel={() => !actionBusy && setConfirmAction(null)} onConfirm={handleConfirmAction}/>
   </>

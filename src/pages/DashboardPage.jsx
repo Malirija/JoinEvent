@@ -18,7 +18,7 @@ function formatToday() {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user, profileName } = useAuth()
   const [requestId, setRequestId] = useState(0)
   const [result, setResult] = useState(null)
 
@@ -44,7 +44,7 @@ export default function DashboardPage() {
     return counts
   }, {})).sort((a, b) => b.count - a.count)
   const recentEvents = [...events].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
-  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'there'
+  const displayName = profileName || user?.user_metadata?.name || user?.email?.split('@')[0] || 'there'
 
   return <>
     <div className="page-heading dashboard-heading"><div><p className="eyebrow">{formatToday()}</p><h1>Welcome, {displayName}</h1><p className="page-description">A current look at the events you host.</p></div><Link className="button button-primary" to="/events/new"><Plus size={17}/> Create event</Link></div>
