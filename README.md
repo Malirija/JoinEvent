@@ -45,7 +45,6 @@ Set the following values in `.env.local`:
 | --- | --- | --- |
 | `VITE_SUPABASE_URL` | Yes | Supabase project URL, for example `https://project-ref.supabase.co`. |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | One key required | Supabase publishable key (preferred). |
-| `VITE_SUPABASE_ANON_KEY` | One key required | Legacy public anon key; used if no publishable key is set. |
 | `VITE_ZAPIER_WEBHOOK_URL` | Optional | Zapier Catch Hook URL called after successful event registration. |
 
 Only Supabase publishable/anon keys belong in a browser app. Never add a

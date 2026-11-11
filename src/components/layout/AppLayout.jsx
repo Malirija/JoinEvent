@@ -1,4 +1,4 @@
-import { CalendarDays, ChartNoAxesColumnIncreasing, LayoutDashboard, LogIn, LogOut, Menu, Settings, Ticket, X } from 'lucide-react'
+import { CalendarDays, Cat, ChartNoAxesColumnIncreasing, LayoutDashboard, LogIn, LogOut, Menu, Settings, Ticket, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/useAuth.js'
@@ -12,6 +12,7 @@ const links = [
 export default function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [authError, setAuthError] = useState('')
+  const [kittenSaysHello, setKittenSaysHello] = useState(false)
   const { user, profileName, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -45,6 +46,10 @@ export default function AppLayout() {
         <div className="sidebar-bottom"><div className="sidebar-divider"/>{authError && <p className="auth-nav-error" role="alert">{authError}</p>}{user ? <><button className="user-card" onClick={() => navigate('/profile')}><span className="user-avatar">{initials}</span><span className="user-details"><strong>{displayName}</strong><small>{user.email}</small></span></button><button className="nav-link logout-link" onClick={handleLogout}><LogOut size={17}/><span>Log out</span></button></> : <Link className="nav-link" to="/login"><LogIn size={17}/><span>Log in</span></Link>}</div>
       </aside>
       {menuOpen && <button aria-label="Close menu overlay" className="sidebar-overlay" onClick={() => setMenuOpen(false)} />}
+      <div className="roaming-kitten">
+        {kittenSaysHello && <span className="kitten-speech" role="status">Hello!</span>}
+        <button className="roaming-kitten-button" type="button" aria-label="Say hello to the kitten" aria-expanded={kittenSaysHello} onClick={() => setKittenSaysHello((open) => !open)}><Cat size={23} strokeWidth={2.2} /></button>
+      </div>
       <main className="main-area">
         <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu size={20} /></button><div className="breadcrumbs"><span>JoinEvent</span><span className="crumb-slash">/</span><strong>{page}</strong></div></div></header>
         <div className="page-wrap"><Outlet /></div>
