@@ -1,43 +1,67 @@
-import { Activity, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, MapPin, Plus, Ticket, Users } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Activity, ArrowRight, CalendarDays, ChartNoAxesColumnIncreasing, Plus, Users } from 'lucide-react'
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Link } from 'react-router-dom'
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import EmptyState from '../components/common/EmptyState.jsx'
+import ErrorMessage from '../components/common/ErrorMessage.jsx'
+import Loading from '../components/common/Loading.jsx'
 import StatCard from '../components/dashboard/StatCard.jsx'
+import { formatEventDate, formatEventTime } from '../lib/formatEvent.js'
+import { getEvents } from '../lib/eventService.js'
+import { useAuth } from '../context/useAuth.js'
 
-const chartData = [
-  { month: 'Jan', attendees: 410 }, { month: 'Feb', attendees: 520 }, { month: 'Mar', attendees: 460 },
-  { month: 'Apr', attendees: 690 }, { month: 'May', attendees: 610 }, { month: 'Jun', attendees: 830 },
-  { month: 'Jul', attendees: 750 }, { month: 'Aug', attendees: 960 }, { month: 'Sep', attendees: 870 },
-  { month: 'Oct', attendees: 1140 }, { month: 'Nov', attendees: 1030 }, { month: 'Dec', attendees: 1290 },
-]
+const EMPTY_EVENTS = []
+const categoryColors = ['#8057e8', '#4c9bd6', '#e99a48', '#e5768b', '#4db68d', '#8d9bce', '#c180cf']
 
-const events = [
-  { title: 'Design Systems Meetup', category: 'Community', date: 'Nov 18, 2024', time: '6:00 PM', place: 'The Workshop, Brooklyn', guests: '84 / 120', status: 'Published', color: 'purple', initial: 'D' },
-  { title: 'Product Launch: Studio 2.0', category: 'Product', date: 'Nov 22, 2024', time: '7:30 PM', place: 'Spring Studios, NYC', guests: '216 / 250', status: 'Published', color: 'blue', initial: 'P' },
-  { title: 'Creative Mornings — New York', category: 'Networking', date: 'Nov 25, 2024', time: '8:30 AM', place: 'NeueHouse Madison Sq', guests: '48 / 80', status: 'Draft', color: 'orange', initial: 'C' },
-]
-
-function DashboardTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null
-  return <div className="chart-tooltip"><strong>{label}</strong><span>{payload[0].value.toLocaleString()} attendees</span></div>
+function formatToday() {
+  return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date())
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth()
+  const [requestId, setRequestId] = useState(0)
+  const [result, setResult] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    getEvents()
+      .then((events) => { if (active) setResult({ requestId, events, error: '' }) })
+      .catch((error) => { if (active) setResult({ requestId, events: [], error: error.message }) })
+    return () => { active = false }
+  }, [requestId])
+
+  const loading = result?.requestId !== requestId
+  const error = loading ? '' : result.error
+  const allEvents = loading ? EMPTY_EVENTS : result.events
+  const events = useMemo(() => allEvents.filter((event) => event.owner_id === user?.id), [allEvents, user?.id])
+  const now = new Date()
+  const upcoming = events.filter((event) => event.status === 'published' && new Date(event.starts_at) > now)
+    .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+  const activeSignups = events.reduce((total, event) => total + event.activeSignups, 0)
+  const categoryData = Object.values(events.reduce((counts, event) => {
+    counts[event.category] = counts[event.category] || { category: event.category, count: 0 }
+    counts[event.category].count += 1
+    return counts
+  }, {})).sort((a, b) => b.count - a.count)
+  const recentEvents = [...events].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'there'
+
   return <>
-    <div className="page-heading dashboard-heading"><div><p className="eyebrow">MONDAY, NOVEMBER 11, 2024</p><h1>Good morning, Jordan <span className="wave">✦</span></h1><p className="page-description">Here’s what’s happening with your events today.</p></div><button className="button button-primary"><Plus size={17}/> Create event</button></div>
-
-    <section className="stats-grid" aria-label="Event summary">
-      <StatCard title="Total events" value="24" change="12.5%" icon={CalendarDays} tone="green" />
-      <StatCard title="Total attendees" value="2,847" change="8.2%" icon={Users} tone="blue" />
-      <StatCard title="Tickets sold" value="1,923" change="4.6%" icon={Ticket} tone="violet" />
-      <StatCard title="Engagement rate" value="68.4%" change="2.1%" icon={Activity} tone="amber" />
-    </section>
-
-    <div className="dashboard-grid">
-      <section className="panel chart-panel"><div className="panel-heading"><div><h2>Attendee overview</h2><p>Track attendance across all your events</p></div><button className="select-button">This year <span>⌄</span></button></div><div className="chart-legend"><span className="legend-dot"/> Total attendees</div><div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 12, right: 8, left: -19, bottom: 0 }}><defs><linearGradient id="attendeeFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8057e8" stopOpacity={0.2}/><stop offset="100%" stopColor="#8057e8" stopOpacity={0.01}/></linearGradient></defs><CartesianGrid vertical={false} stroke="#edf0f2" strokeDasharray="3 5"/><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#969da7', fontSize: 11 }} dy={9}/><YAxis axisLine={false} tickLine={false} tick={{ fill: '#969da7', fontSize: 11 }} tickFormatter={(value) => value >= 1000 ? `${value / 1000}k` : value}/><Tooltip content={<DashboardTooltip/>}/><Area type="monotone" dataKey="attendees" stroke="#8057e8" strokeWidth={2.5} fill="url(#attendeeFill)" activeDot={{ r: 4, strokeWidth: 3, stroke: '#fff' }}/></AreaChart></ResponsiveContainer></div><div className="chart-summary"><div><span className="summary-marker"/><span>Attendees this year</span><strong>8,964</strong></div><span className="summary-growth"><ArrowUpRight size={14}/> 18.6%</span></div></section>
-      <section className="panel upcoming-panel"><div className="panel-heading"><div><h2>Upcoming events</h2><p>Your next events at a glance</p></div><Link to="/events" className="text-link">View all <ArrowRight size={14}/></Link></div><div className="upcoming-list"><article className="upcoming-event"><span className="date-tile"><small>NOV</small><strong>18</strong></span><div className="upcoming-details"><strong>Design Systems Meetup</strong><span><Clock3 size={13}/> 6:00 PM · <MapPin size={13}/> Brooklyn, NY</span><div className="attendee-progress"><i style={{width:'70%'}}/></div><small>84 of 120 attendees</small></div></article><article className="upcoming-event"><span className="date-tile"><small>NOV</small><strong>22</strong></span><div className="upcoming-details"><strong>Product Launch: Studio 2.0</strong><span><Clock3 size={13}/> 7:30 PM · <MapPin size={13}/> New York, NY</span><div className="attendee-progress"><i style={{width:'86%'}}/></div><small>216 of 250 attendees</small></div></article><article className="upcoming-event"><span className="date-tile"><small>NOV</small><strong>25</strong></span><div className="upcoming-details"><strong>Creative Mornings — New York</strong><span><Clock3 size={13}/> 8:30 AM · <MapPin size={13}/> New York, NY</span><div className="attendee-progress"><i style={{width:'60%'}}/></div><small>48 of 80 attendees</small></div></article></div><Link to="/events" className="panel-bottom-link">Browse your event calendar <ArrowRight size={14}/></Link></section>
-    </div>
-
-    <section className="panel events-table-panel"><div className="panel-heading"><div><h2>Recent events</h2><p>A quick look at your latest activity</p></div><Link to="/events" className="text-link">All events <ArrowRight size={14}/></Link></div><div className="table-wrap"><table><thead><tr><th>EVENT NAME</th><th>DATE & TIME</th><th>LOCATION</th><th>ATTENDEES</th><th>STATUS</th></tr></thead><tbody>{events.map((event) => <tr key={event.title}><td><div className="event-title"><span className={`event-avatar ${event.color}`}>{event.initial}</span><span><strong>{event.title}</strong><small>{event.category}</small></span></div></td><td><strong>{event.date}</strong><small className="cell-sub">{event.time}</small></td><td><span className="location-cell"><MapPin size={14}/>{event.place}</span></td><td><strong>{event.guests}</strong></td><td><span className={`status-pill ${event.status.toLowerCase()}`}>{event.status === 'Published' ? <Check size={12}/> : <i/>}{event.status}</span></td></tr>)}</tbody></table></div></section>
-    <div className="dashboard-bottom"><div className="tip-card"><span className="tip-icon"><Check size={17}/></span><span><strong>You’re all caught up!</strong><small>Come back later for new event activity.</small></span></div><div className="dashboard-help">Need a hand? <a href="#help">Visit our help center <ArrowRight size={13}/></a></div></div>
+    <div className="page-heading dashboard-heading"><div><p className="eyebrow">{formatToday()}</p><h1>Welcome, {displayName}</h1><p className="page-description">A current look at the events you host.</p></div><Link className="button button-primary" to="/events/new"><Plus size={17}/> Create event</Link></div>
+    {error && <ErrorMessage message={error} onRetry={() => setRequestId((current) => current + 1)}/>}
+    {loading ? <Loading label="Loading your event data..."/> : !error && <>
+      <section className="stats-grid" aria-label="Your event summary">
+        <StatCard title="Events created" value={events.length.toLocaleString()} note="Events you host" icon={CalendarDays} tone="violet" />
+        <StatCard title="Active signups" value={activeSignups.toLocaleString()} note="Across your events" icon={Users} tone="blue" />
+        <StatCard title="Upcoming events" value={upcoming.length.toLocaleString()} note="Published and upcoming" icon={Activity} tone="green" />
+      </section>
+      {events.length === 0 ? <section className="panel dashboard-empty-panel"><EmptyState icon={CalendarDays} title="Your hosted events will appear here" description="Create an event to start building your event calendar."/><Link className="button button-primary" to="/events/new"><Plus size={16}/> Create your first event</Link></section> : <>
+        <div className="dashboard-grid data-dashboard-grid">
+          <section className="panel chart-panel"><div className="panel-heading"><div><h2>Events by category</h2><p>Distribution of your hosted events</p></div></div>{categoryData.length ? <div className="live-chart-wrap"><ResponsiveContainer width="100%" height="100%"><BarChart data={categoryData} margin={{ top: 10, right: 14, left: -18, bottom: 0 }}><CartesianGrid vertical={false} stroke="#edf0f2" strokeDasharray="3 5"/><XAxis dataKey="category" axisLine={false} tickLine={false} tick={{ fill: '#858d96', fontSize: 10 }} dy={8}/><YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#969da7', fontSize: 10 }}/><Tooltip cursor={{ fill: '#f7f5fd' }}/><Bar dataKey="count" name="Events" fill="#8057e8" radius={[5, 5, 0, 0]}>{categoryData.map((item, index) => <Cell key={item.category} fill={categoryColors[index % categoryColors.length]}/>)}</Bar></BarChart></ResponsiveContainer></div> : <EmptyState icon={ChartNoAxesColumnIncreasing} title="No category data" description="Events with categories will appear here."/>}</section>
+          <section className="panel upcoming-panel"><div className="panel-heading"><div><h2>Upcoming events</h2><p>Published events you host</p></div><Link to="/events" className="text-link">All events <ArrowRight size={14}/></Link></div>{upcoming.length ? <div className="upcoming-list">{upcoming.slice(0, 4).map((event) => <Link className="upcoming-event live-upcoming" to={`/events/${event.id}`} key={event.id}><span className="date-tile"><small>{new Intl.DateTimeFormat(undefined, { month: 'short' }).format(new Date(event.starts_at)).toUpperCase()}</small><strong>{new Intl.DateTimeFormat(undefined, { day: 'numeric' }).format(new Date(event.starts_at))}</strong></span><span className="upcoming-details"><strong>{event.title}</strong><span>{formatEventDate(event.starts_at)} · {formatEventTime(event.starts_at)}</span><small>{event.location}</small></span></Link>)}</div> : <EmptyState title="No upcoming published events" description="Publish an event with a future start date and it will appear here."/>}<Link to="/events" className="panel-bottom-link">View events <ArrowRight size={14}/></Link></section>
+        </div>
+        <section className="panel events-table-panel"><div className="panel-heading"><div><h2>Recently created</h2><p>Your latest hosted events</p></div><Link to="/events" className="text-link">All events <ArrowRight size={14}/></Link></div><div className="table-wrap"><table><thead><tr><th>EVENT</th><th>STARTS</th><th>LOCATION</th><th>ACTIVE SIGNUPS</th><th>STATUS</th></tr></thead><tbody>{recentEvents.map((event) => <tr key={event.id}><td><Link className="dashboard-event-link" to={`/events/${event.id}`}>{event.title}</Link><small className="cell-sub">{event.category}</small></td><td><strong>{formatEventDate(event.starts_at)}</strong><small className="cell-sub">{formatEventTime(event.starts_at)}</small></td><td>{event.location}</td><td><strong>{event.activeSignups}{event.capacity ? ` / ${event.capacity}` : ''}</strong></td><td><span className={`status-pill ${event.status === 'published' ? 'published' : 'draft'}`}>{event.status}</span></td></tr>)}</tbody></table></div></section>
+      </>}
+    </>}
   </>
 }

@@ -2,6 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import EventsPage from './pages/EventsPage.jsx'
+import EventDetailsPage from './pages/EventDetailsPage.jsx'
+import CreateEventPage from './pages/CreateEventPage.jsx'
+import EditEventPage from './pages/EditEventPage.jsx'
 import StatisticsPage from './pages/StatisticsPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
@@ -19,6 +22,9 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route index element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="events" element={<EventsPage />} />
+        <Route path="events/new" element={<ProtectedRoute><CreateEventPage /></ProtectedRoute>} />
+        <Route path="events/:id/edit" element={<ProtectedRoute><EditEventPage /></ProtectedRoute>} />
+        <Route path="events/:id" element={<EventDetailsPage />} />
         <Route path="statistics" element={<ProtectedRoute><StatisticsPage /></ProtectedRoute>} />
         <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="login" element={(!loading && user) ? <Navigate to="/" replace /> : <LoginPage />} />
