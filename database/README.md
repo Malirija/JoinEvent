@@ -8,9 +8,9 @@ separate authentication table.
 ## Apply everything with Supabase CLI (recommended)
 
 The database structure is in the ordered migrations under `supabase/migrations/`.
-The second migration adds the event category and price fields plus the secure
-capacity-aware event listing RPC required by the Events module. From the project
-root, link the project if you have not already linked it, then push migrations:
+The ordered migrations add the event category and price fields, capacity-aware
+event reads, and signup-history reads required by the Events module. From the
+project root, link the project if you have not already linked it, then push migrations:
 
 ```powershell
 supabase link --project-ref YOUR_PROJECT_REF
@@ -46,7 +46,9 @@ them in this exact order:
 9. `05_indexes/create_indexes.sql` — lookup and filtering indexes.
 10. `supabase/migrations/20261112090000_events_module.sql` — event category,
     price, and capacity-aware read RPC.
-11. Optional: `06_seed/seed.sql` — example event rows.
+11. `supabase/migrations/20261112100000_signup_read_functions.sql` — secure
+    attendee and personal signup reads.
+12. Optional: `06_seed/seed.sql` — example event rows.
 
 Run each complete file as a single SQL Editor query. The schema, trigger,
 functions, policies, indexes, and event module migration are safe to re-run for
