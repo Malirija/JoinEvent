@@ -21,7 +21,7 @@ JoinEvent is a responsive event management dashboard frontend built with React, 
    cp .env.example .env
    ```
 
-   Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to your Supabase project values when you are ready to connect the frontend. The current UI does not require Supabase credentials.
+   Set `VITE_SUPABASE_URL` and either `VITE_SUPABASE_PUBLISHABLE_KEY` or `VITE_SUPABASE_ANON_KEY` to your Supabase project values. Both key formats are supported; the publishable key takes precedence if both are present. Restart Vite after changing `.env`.
 
 3. Start the development server:
 
@@ -30,6 +30,16 @@ JoinEvent is a responsive event management dashboard frontend built with React, 
    ```
 
 Vite prints the local URL in the terminal. To produce and preview a production build, run `npm run build` and `npm run preview`.
+
+## Authentication
+
+Registration and login use Supabase Auth directly. Supabase persists the
+session in the browser, and the database trigger creates the matching profile
+row from the registration name metadata. The frontend does not insert profile
+rows itself. Depending on the Supabase project's email confirmation settings,
+registration may redirect to the login screen with a message to confirm email.
+The overview, statistics, and profile routes require authentication; the
+events list remains public.
 
 ## Routes
 
