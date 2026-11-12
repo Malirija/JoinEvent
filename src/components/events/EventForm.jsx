@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import ErrorMessage from '../common/ErrorMessage.jsx'
 import { eventCategories } from '../../lib/categoryImages.js'
+import { supabase } from '../../lib/supabase.js'
+import { LoaderCircle, Sparkles } from 'lucide-react'
 
 const eventLocations = ['Vilnius', 'Kaunas', 'Klaipėda', 'Utena', 'Panevėžys', 'Alytus', 'Druskininkai', 'Mažeikiai']
 
@@ -38,10 +40,39 @@ export default function EventForm({ initialEvent, onSubmit, submitLabel }) {
   const [fieldErrors, setFieldErrors] = useState({})
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [generationError, setGenerationError] = useState('')
 
   function updateField(field, value) {
     setValues((current) => ({ ...current, [field]: value }))
     setFieldErrors((current) => ({ ...current, [field]: '' }))
+    if (field === 'description') setGenerationError('')
+  }
+
+  async function generateDescription() {
+    const title = values.title.trim()
+    if (!title || !supabase) return
+    if (values.description.trim() && !window.confirm('Replace the existing description with an AI-generated one?')) return
+
+    setGenerating(true)
+    setGenerationError('')
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-event-description', {
+        body: { title },
+        signal: AbortSignal.timeout(105_000),
+      })
+      if (error) throw error
+      if (typeof data?.description !== 'string' || !data.description.trim()) {
+        throw new Error('The generator returned an empty description. Please try again.')
+      }
+      updateField('description', data.description.trim())
+    } catch (error) {
+      setGenerationError(error.name === 'TimeoutError' || error.name === 'AbortError'
+        ? 'This is taking longer than expected. Please try again in a moment.'
+        : error.message || 'We couldn’t generate the description just now. Please try again in a moment.')
+    } finally {
+      setGenerating(false)
+    }
   }
 
   function updateScheduleDate(field, date) {
@@ -118,7 +149,7 @@ export default function EventForm({ initialEvent, onSubmit, submitLabel }) {
     <div className="form-section"><h2>Event information</h2><p>Give people the details they need to join you.</p>
       <div className="form-field"><label htmlFor="event-title">Event title <i>*</i></label><input id="event-title" value={values.title} onChange={(event) => updateField('title', event.target.value)} maxLength={160} placeholder="e.g. Vilnius Product Meetup" aria-invalid={Boolean(fieldErrors.title)} />{fieldErrors.title && <small className="field-error">{fieldErrors.title}</small>}</div>
       <div className="form-grid"><div className="form-field"><label htmlFor="event-category">Category <i>*</i></label><select id="event-category" value={values.category} onChange={(event) => updateField('category', event.target.value)}>{eventCategories.map((category) => <option key={category}>{category}</option>)}</select>{fieldErrors.category && <small className="field-error">{fieldErrors.category}</small>}</div><div className="form-field"><label htmlFor="event-location">Location <i>*</i></label><select id="event-location" value={values.location} onChange={(event) => updateField('location', event.target.value)} aria-invalid={Boolean(fieldErrors.location)}><option value="">Choose a city</option>{eventLocations.map((location) => <option key={location} value={location}>{location}</option>)}</select>{fieldErrors.location && <small className="field-error">{fieldErrors.location}</small>}</div></div>
-      <div className="form-field"><label htmlFor="event-description">Description</label><textarea id="event-description" rows="5" value={values.description} onChange={(event) => updateField('description', event.target.value)} maxLength={5000} placeholder="What should attendees know?"/></div>
+      <div className="form-field"><div className="description-label-row"><label htmlFor="event-description">Description</label><button className="button button-secondary ai-generate-button" type="button" onClick={generateDescription} disabled={!values.title.trim() || generating || !supabase}><Sparkles size={14}/>{generating ? <><LoaderCircle size={14} className="ai-spinner"/> Generating...</> : 'Generate with AI'}</button></div><textarea id="event-description" rows="5" value={values.description} onChange={(event) => updateField('description', event.target.value)} maxLength={5000} placeholder="What should attendees know?"/>{generationError && <small className="field-error" role="alert">{generationError}</small>}</div>
     </div>
     <div className="form-section"><h2>Schedule & capacity</h2><p>Set when the event happens and how many people can attend.</p>
       <div className="form-grid"><div className="form-field"><label>Starts <i>*</i></label><div className="datetime-inputs"><label className="sr-only" htmlFor="event-start-date">Start date</label><input id="event-start-date" type="date" min={today} value={startDate} onChange={(event) => updateScheduleDate('startsAt', event.target.value)} aria-invalid={Boolean(fieldErrors.startsAt)}/><label className="sr-only" htmlFor="event-start-time">Start time</label><input id="event-start-time" type="time" step="60" value={times.startsAt} onChange={(event) => updateScheduleTime('startsAt', event.target.value)} aria-invalid={Boolean(fieldErrors.startsAt)}/></div>{fieldErrors.startsAt && <small className="field-error">{fieldErrors.startsAt}</small>}</div><div className="form-field"><label>Ends <i>*</i></label><div className="datetime-inputs"><label className="sr-only" htmlFor="event-end-date">End date</label><input id="event-end-date" type="date" min={endMinDate} value={values.endsAt.slice(0, 10)} onChange={(event) => updateScheduleDate('endsAt', event.target.value)} aria-invalid={Boolean(fieldErrors.endsAt)}/><label className="sr-only" htmlFor="event-end-time">End time</label><input id="event-end-time" type="time" step="60" min={endMinTime} value={times.endsAt} onChange={(event) => updateScheduleTime('endsAt', event.target.value)} aria-invalid={Boolean(fieldErrors.endsAt)}/></div>{fieldErrors.endsAt && <small className="field-error">{fieldErrors.endsAt}</small>}</div></div>
