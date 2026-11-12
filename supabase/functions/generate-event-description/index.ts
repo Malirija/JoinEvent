@@ -4,7 +4,7 @@ type ErrorResponse = { error: string };
 
 // Keep the model in one place so it can be changed without altering the prompt.
 const MODEL = "gemini-3.1-flash-lite";
-const GEMINI_TIMEOUT_MS = 90_000;
+const GEMINI_TIMEOUT_MS = 60_000;
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -43,7 +43,7 @@ Requirements:
 - Write an attractive description that encourages people to attend.
 - Use a friendly, engaging and professional tone.
 - Make the text sound natural, not robotic or overly promotional.
-- Write a concise description of 3–5 sentences.
+- Write a concise description of exactly 3 sentences.
 - Use the same language as the event title.
 - Do not repeat the event title unnecessarily.
 - Do not invent dates, times, locations, ticket prices, speakers, performers, organizers or other specific facts.
@@ -63,7 +63,7 @@ Event title: ${title}`;
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 512,
+          maxOutputTokens: 256,
           thinkingConfig: { thinkingLevel: "LOW" },
         },
       }),
@@ -86,6 +86,6 @@ Event title: ${title}`;
   } catch (error) {
     const timedOut = error instanceof DOMException && error.name === "TimeoutError";
     console.error("Gemini description generation failed:", timedOut ? "Request timed out" : error instanceof Error ? error.message : "Unknown error");
-    return jsonResponse({ error: timedOut ? "Description generation is taking longer than expected. Please try again in a moment." : "We couldn’t generate the description just now. Please try again in a moment." }, timedOut ? 504 : 502);
+    return jsonResponse({ error: timedOut ? "Gemini took too long to respond. Please try again; the shorter prompt should complete faster." : "We couldn’t generate the description just now. Please try again in a moment." }, timedOut ? 504 : 502);
   }
 });

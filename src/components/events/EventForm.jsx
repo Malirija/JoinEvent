@@ -59,7 +59,7 @@ export default function EventForm({ initialEvent, onSubmit, submitLabel }) {
     try {
       const { data, error } = await supabase.functions.invoke('generate-event-description', {
         body: { title },
-        signal: AbortSignal.timeout(105_000),
+        signal: AbortSignal.timeout(70_000),
       })
       if (error) throw error
       if (typeof data?.description !== 'string' || !data.description.trim()) {
@@ -67,9 +67,14 @@ export default function EventForm({ initialEvent, onSubmit, submitLabel }) {
       }
       updateField('description', data.description.trim())
     } catch (error) {
-      setGenerationError(error.name === 'TimeoutError' || error.name === 'AbortError'
-        ? 'This is taking longer than expected. Please try again in a moment.'
-        : error.message || 'We couldn’t generate the description just now. Please try again in a moment.')
+      let message = error.name === 'TimeoutError' || error.name === 'AbortError'
+        ? 'Gemini is taking longer than usual to respond. Please try again in a moment.'
+        : error.message || 'We couldn’t generate the description just now. Please try again in a moment.'
+      if (error.context && typeof error.context.clone === 'function') {
+        const responseBody = await error.context.clone().json().catch(() => null)
+        if (typeof responseBody?.error === 'string') message = responseBody.error
+      }
+      setGenerationError(message)
     } finally {
       setGenerating(false)
     }
