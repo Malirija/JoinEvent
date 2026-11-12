@@ -194,5 +194,64 @@ npm run preview
 4. Deploy. `vercel.json` rewrites nested app paths to `index.html` for React Router navigation and refreshes.
 5. Add the production Vercel URL to Supabase Auth's site URL and allowed redirect URLs.
 
-No custom backend, Edge Functions, payments, image uploads, or realtime
-subscriptions are used.
+AI event description generation uses a Supabase Edge Function and Google's
+Gemini API. The Gemini key is kept in the Edge Function environment and is
+never sent to the browser.
+
+## AI event descriptions
+
+On the create or edit event form, enter a title and choose **Generate with AI**
+beside Description. The generated copy is placed in the editable description
+field. If it already contains text, the app asks before replacing it. Generation
+uses only the title and is intended as a draft; review it before saving.
+
+Get a Gemini API key in [Google AI Studio](https://aistudio.google.com/app/apikey).
+Keep the key private. For local function testing, copy the example file to the
+project root as `.env.local` and replace the sample value:
+
+```powershell
+Copy-Item supabase/functions/.env.example .env.local
+```
+
+The root `.gitignore` already excludes `.env.local` and `.env.*` files. Do not
+put `GEMINI_API_KEY` in a `VITE_` variable; those values are exposed in the
+browser bundle. This example contains no real key.
+
+Install the [Supabase CLI](https://supabase.com/docs/guides/cli), then from the
+project root start the function locally (Docker must be running):
+
+```sh
+supabase functions serve generate-event-description --env-file .env.local
+```
+
+In another terminal, test the local function:
+
+```sh
+curl -i --request POST 'http://127.0.0.1:54321/functions/v1/generate-event-description' \
+  --header 'Content-Type: application/json' \
+  --data '{"title":"Vilnius Product Meetup"}'
+```
+
+Expected response shape:
+
+```json
+{"description":"...generated event description..."}
+```
+
+For deployment, sign in and link this repo to the intended Supabase project if
+you have not done so already. Configure the production secret without putting
+the key in source control:
+
+```sh
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+supabase secrets set GEMINI_API_KEY=your_api_key
+supabase functions deploy generate-event-description
+```
+
+The deploy command deploys only this function. No database migration or schema
+change is needed. Supabase's default function JWT verification remains enabled;
+the frontend invokes it with the user's Supabase session. The function permits
+cross-origin browser requests, while the Gemini key remains server-side. The
+model is configured in one place at the top of
+`supabase/functions/generate-event-description/index.ts`.

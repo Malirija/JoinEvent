@@ -100,6 +100,7 @@
 .form-field>label i{font-style:normal;color:#d56962}
 .form-field input,.form-field textarea,.form-field select{width:100%;min-height:37px;padding:9px 10px;border:1px solid #e4e8ec;border-radius:6px;background:#fff;color:#3a424c;outline:0;font-size:12px}
 .form-field textarea{resize:vertical;line-height:1.55}
+.description-label-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.description-label-row>label{font-size:12px;color:#514b66;font-weight:600}.ai-generate-button{height:30px;padding:0 10px;font-size:11px}.ai-generate-button:disabled{opacity:.55;cursor:not-allowed}.ai-spinner{animation:ai-spin .8s linear infinite}@keyframes ai-spin{to{transform:rotate(360deg)}}
 .form-field input:focus,.form-field textarea:focus,.form-field select:focus{border-color:#9879ed;box-shadow:0 0 0 3px #8158e81a}
 .form-field [aria-invalid="true"]{border-color:#df817b}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
